@@ -285,7 +285,7 @@ declare module "hapi" {
 			options: IProxyHandlerConfig): void;
 		/** Redirects the client to the specified uri. Same as calling reply().redirect(uri).
 		he response flow control rules apply. */
-		redirect(uri: string): Response;
+		redirect(uri: string): ResponseRedirect;
 	}
 
 	export interface ISessionHandler {
@@ -337,7 +337,7 @@ declare module "hapi" {
 		err: any,
 		res: http.ServerResponse,
 		req: Request,
-		reply: () => void,
+		reply: IReply,
 		settings: IProxyHandlerConfig,
 		ttl: number
 		) => void;
@@ -356,24 +356,24 @@ declare module "hapi" {
 	export interface IValidationFunction {
 
 		(/**   the object containing the path parameters. */
-		value: any,
-		/**  the server validation options. */
-		options: any,
-		/**   the callback function called when validation is completed.  */
-		next: (err: any, value: any) => void): void;
+			value: any,
+			/**  the server validation options. */
+			options: any,
+			/**   the callback function called when validation is completed.  */
+			next: (err: any, value: any) => void): void;
 	}
 	/**  a custom error handler function with the signature 'function(request, reply, source, error)` */
 	export interface IRouteFailFunction {
 		/**  a custom error handler function with the signature 'function(request, reply, source, error)` */
 		(
-		/** - the [request object]. */
-		request: Request,
-		/**   the continuation reply interface. */
-		reply: IReply,
-		/**  the source of the invalid field (e.g. 'path', 'query', 'payload'). */
-		source: string,
-		/**  the error object prepared for the client response (including the validation function error under error.data). */
-		error: any): void;
+			/** - the [request object]. */
+			request: Request,
+			/**   the continuation reply interface. */
+			reply: IReply,
+			/**  the source of the invalid field (e.g. 'path', 'query', 'payload'). */
+			source: string,
+			/**  the error object prepared for the client response (including the validation function error under error.data). */
+			error: any): void;
 	}
 
 	/**  Each route can be customize to change the default behavior of the request lifecycle using the following options:  */
@@ -740,7 +740,7 @@ declare module "hapi" {
 		defaultExtension - optional string, appended to file requests if the requested file is not found. Defaults to no extension.*/
 		directory?: {
 			path: string |Array<string> | IRequestHandler<string> | IRequestHandler<Array<string>>;
-			index?: boolean;
+			index?: boolean|string|string[];
 			listing?: boolean;
 			showHidden?: boolean;
 			redirectToSlash?: boolean;
@@ -880,14 +880,14 @@ declare module "hapi" {
 		response - any authentication response action such as redirection. Ignored if err is present, otherwise required.
 		reply.continue() - is called if payload authentication succeeded.
 		When the scheme payload() method returns an error with a message, it means payload validation failed due to bad payload. If the error has no message but includes a scheme name (e.g. Boom.unauthorized(null, 'Custom')), authentication may still be successful if the route auth.payload configuration is set to 'optional'.*/
-		payload? (request: Request, reply: IReply): void;
+		payload?(request: Request, reply: IReply): void;
 		/** response(request, reply) - optional function called to decorate the response with authentication headers before the response headers or payload is written where:
 		request - the request object.
 		reply(err, response) - is called if an error occurred where:
 		err - any authentication error.
 		response - any authentication response to send instead of the current response. Ignored if err is present, otherwise required.
 		reply.continue() - is called if the operation succeeded.*/
-		response? (request: Request, reply: IReply): void;
+		response?(request: Request, reply: IReply): void;
 		/** an optional object  */
 		options?: {
 			/**  if true, requires payload validation as part of the scheme and forbids routes from disabling payload auth validation. Defaults to false.*/
@@ -919,19 +919,19 @@ declare module "hapi" {
 				end: boolean;
 			};
 		},
-		callback: (
-		/**the response object where:
-		statusCode - the HTTP status code.
-		headers - an object containing the headers set.
-		payload - the response payload string.
-		rawPayload - the raw response payload buffer.
-		raw - an object with the injection request and response objects:
-		req - the simulated node request object.
-		res - the simulated node response object.
-		result - the raw handler response (e.g. when not a stream or a view) before it is serialized for transmission. If not available, the value is set to payload. Useful for inspection and reuse of the internal objects returned (instead of parsing the response string).
-		request - the request object.*/
-		res: { statusCode: number; headers: IDictionary<string>; payload: string; rawPayload: Buffer; raw: { req: http.ClientRequest; res: http.ServerResponse }; result: string; request: Request }) => void
-		):void;
+			callback: (
+			/**the response object where:
+			statusCode - the HTTP status code.
+			headers - an object containing the headers set.
+			payload - the response payload string.
+			rawPayload - the raw response payload buffer.
+			raw - an object with the injection request and response objects:
+			req - the simulated node request object.
+			res - the simulated node response object.
+			result - the raw handler response (e.g. when not a stream or a view) before it is serialized for transmission. If not available, the value is set to payload. Useful for inspection and reuse of the internal objects returned (instead of parsing the response string).
+			request - the request object.*/
+			res: { statusCode: number; headers: IDictionary<string>; payload: string; rawPayload: Buffer; raw: { req: http.ClientRequest; res: http.ServerResponse }; result: string; request: Request }) => void
+			): void;
 
 	}
 
@@ -1108,7 +1108,7 @@ declare module "hapi" {
 		/**  the request URI's path component. */
 		path: string;
 		/** the request payload based on the route payload.output and payload.parse settings.*/
-		payload: any;
+		payload: stream.Readable | Buffer | any;
 		/**  plugin-specific state. Provides a place to store and pass request-level plugin data. The plugins is an object where each key is a plugin name and the value is the state.*/
 		plugins: any;
 		/** an object where each key is the name assigned by a route prerequisites function. The values are the raw values provided to the continuation function as argument. For the wrapped response object, use responses.*/
@@ -1408,8 +1408,38 @@ declare module "hapi" {
 		options - optional configuration. If the state was previously registered with the server using server.state(), the specified keys in options override those same keys in the server definition (but not others).*/
 		state(name: string, value: string, options?: any): void;
 
+		/** sets a string suffix when the response is process via JSON.stringify().*/
+		suffix(suffix: string): void;
+		/** overrides the default route cache expiration rule for this response instance where:
+msec - the time-to-live value in milliseconds.*/
+		ttl(msec: number): void;
+		/** sets the HTTP 'Content-Type' header where:
+value - is the mime type. Should only be used to override the built-in default for each response type.*/
+		type(mimeType: string): void;
+		/** clears the HTTP cookie by setting an expired value where:
+name - the cookie name.
+options - optional configuration for expiring cookie. If the state was previously registered with the server using server.state(), the specified keys in options override those same keys in the server definition (but not others).*/
+		unstate(name: string, options?: { [key: string]: string }): void;
+		/** adds the provided header to the list of inputs affected the response generation via the HTTP 'Vary' header where:
+header - the HTTP request header name.*/
+		vary(header: string): void;
 	}
-
+	/** When using the redirect() method, the response object provides these additional methods */
+	export class ResponseRedirect extends Response{
+		/** sets the status code to 302 or 307 (based on the rewritable() setting) where:
+isTemporary - if false, sets status to permanent. Defaults to true.*/
+		temporary(isTemporary: boolean): void;
+		/** sets the status code to 301 or 308 (based on the rewritable() setting) where:
+isPermanent - if true, sets status to temporary. Defaults to false. */
+		permanent(isPermanent: boolean): void;
+		/** sets the status code to 301/302 for rewritable (allows changing the request method from 'POST' to 'GET') or 307/308 for non-rewritable (does not allow changing the request method from 'POST' to 'GET'). Exact code based on the temporary() or permanent() setting. Arguments:
+isRewritable - if false, sets to non-rewritable. Defaults to true.
+Permanent	Temporary
+Rewritable	301	302(1)
+Non-rewritable	308(2)	307
+Notes: 1. Default value. 2. Proposed code, not supported by all clients. */
+		rewritable(isRewritable: boolean): void;
+	}
 
 
 	/** Server http://hapijs.com/api#server
@@ -1619,7 +1649,7 @@ declare module "hapi" {
 			return reply(request.auth.credentials.user);
 			}
 			});*/
-			default(options: string):void;
+			default(options: string): void;
 			/** server.auth.scheme(name, scheme)
 			Registers an authentication scheme where:
 			name - the scheme name.
@@ -1666,7 +1696,7 @@ declare module "hapi" {
 			}
 			}
 			});*/
-			strategy(name: string, scheme: any, mode?: boolean, options?: any):void;
+			strategy(name: string, scheme: any, mode?: boolean, options?: any): void;
 
 			/** server.auth.test(strategy, request, next)
 			Tests a request against an authentication strategy where:
@@ -1768,7 +1798,7 @@ declare module "hapi" {
 		return reply.success();
 		}
 		});*/
-		decorate(type: string, property: string, method: Function):void;
+		decorate(type: string, property: string, method: Function): void;
 
 		/** server.dependency(dependencies, [after])
 		Used within a plugin to declares a required dependency on other plugins where:
@@ -1988,7 +2018,7 @@ declare module "hapi" {
 			/**  a unique method name used to invoke the method via server.methods[name]. When configured with caching enabled, server.methods[name].cache.drop(arg1, arg2, ..., argn, callback) can be used to clear the cache for a given key. Supports using nested names such as utils.users.get which will automatically create the missing path under server.methods and can be accessed for the previous example via server.methods.utils.users.get.*/
 			name: string,
 			method: IServerMethod,
-			options?: IServerMethodOptions):void;
+			options?: IServerMethodOptions): void;
 
 
 		/**server.method(methods)
@@ -2013,7 +2043,7 @@ declare module "hapi" {
 			name: string; method: IServerMethod; options?: IServerMethodOptions
 		}| Array<{
 				name: string; method: IServerMethod; options?: IServerMethodOptions
-			}>):void;
+			}>): void;
 		/**server.path(relativeTo)
 		Sets the path prefix used to locate static resources (files and view templates) when relative paths are used where:
 		relativeTo - the path prefix added to any relative file path starting with '.'.
@@ -2054,9 +2084,9 @@ declare module "hapi" {
 				prefix: string; vhost?: string|string[]
 			};
 		}
-			, callback: (err: any) => void):void;
+			, callback: (err: any) => void): void;
 
-		register(plugins: any|any[], callback: (err: any) => void):void;
+		register(plugins: any|any[], callback: (err: any) => void): void;
 
 		/**server.render(template, context, [options], callback)
 		Utilizes the server views manager to render a template where:
@@ -2081,7 +2111,7 @@ declare module "hapi" {
 		server.render('hello', context, function (err, rendered, config) {
 		console.log(rendered);
 		});*/
-		render(template: string, context: any, options: any, callback: (err: any, rendered: any, config: any) => void):void;
+		render(template: string, context: any, options: any, callback: (err: any, rendered: any, config: any) => void): void;
 		/** server.route(options)
 		Adds a connection route where:
 		options - a route configuration object or an array of configuration objects.
@@ -2093,8 +2123,8 @@ declare module "hapi" {
 		{ method: 'GET', path: '/1', handler: function (request, reply) { return reply('ok'); } },
 		{ method: 'GET', path: '/2', handler: function (request, reply) { return reply('ok'); } }
 		]);*/
-		route(options: IRouteConfiguration):void;
-		route(options: IRouteConfiguration[]):void;
+		route(options: IRouteConfiguration): void;
+		route(options: IRouteConfiguration[]): void;
 		/**server.select(labels)
 		Selects a subset of the server's connections where:
 		labels - a single string or array of strings of labels used as a logical OR statement to select all the connections with matching labels in their configuration.
