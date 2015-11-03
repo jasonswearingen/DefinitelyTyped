@@ -20,8 +20,7 @@ declare class Promise<R> implements Promise.Thenable<R>, Promise.Inspection<R> {
 	/**
 	 * Create a new promise. The passed in function will receive functions `resolve` and `reject` as its arguments which can be called to seal the fate of the created promise.
 	 */
-	constructor(callback: (resolve: (thenable: Promise.Thenable<R>) => void, reject: (error: any) => void) => void);
-	constructor(callback: (resolve: (result: R) => void, reject: (error: any) => void) => void);
+	constructor(callback: (resolve: (resultOrThenable: R|Promise.Thenable<R>) => void, reject: (error: any) => void) => void);
 
 	/**
 	 * Promises/A+ `.then()` with progress handler. Returns a new promise chained from this promise. The new promise will be rejected or resolved dedefer on the passed `fulfilledHandler`, `rejectedHandler` and the state of this promise.
@@ -36,6 +35,10 @@ declare class Promise<R> implements Promise.Thenable<R>, Promise.Inspection<R> {
 	 *
 	 * Alias `.caught();` for compatibility with earlier ECMAScript version.
 	 */
+
+	catch<U>(onReject?: (error: Error) => Error): Promise<R>; //if you return an error it returns the original promise
+	caught<U>(onReject?: (error: Error) => Error): Promise<R>; //if you return an error it returns the original promise
+
 	catch<U>(onReject?: (error: any) => Promise.Thenable<U>): Promise<U>;
 	caught<U>(onReject?: (error: any) => Promise.Thenable<U>): Promise<U>;
 
