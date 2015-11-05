@@ -13,13 +13,13 @@ Extracted from D3. */
         /** the symbol used to seperate cells in the row.*/
         delimiter: string,
         /** example: "text/plain" */
-        encoding?: string) => _dsv.Dsv;
+        encoding?: string) => _d3dsv.D3Dsv;
     export = loader;
 }
-declare module _dsv {
+declare module _d3dsv {
 	/** A parser and formatter for DSV (CSV and TSV) files.
 Extracted from D3. */
-	export class Dsv {
+	export class D3Dsv {
 		/** Parses the specified string, which is the contents of a CSV file, returning an array of objects representing the parsed rows. 
 		The string is assumed to be RFC4180-compliant. 
 		Unlike the parseRows method, this method requires that the first line of the CSV file contains a comma-separated list of column names; 
