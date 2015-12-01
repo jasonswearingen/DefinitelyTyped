@@ -213,9 +213,13 @@ declare namespace __React {
         nativeEvent: Event;
         preventDefault(): void;
         stopPropagation(): void;
-        target: EventTarget;
+        target: IEventTarget;
         timeStamp: Date;
         type: string;
+    }
+
+    interface IEventTarget extends EventTarget {
+        value: any;
     }
 
     interface ClipboardEvent extends SyntheticEvent {
