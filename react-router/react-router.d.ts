@@ -45,6 +45,7 @@ declare namespace ReactRouter {
         route?: PlainRoute
         routeParams?: R
         routes?: PlainRoute[]
+        children?: React.ReactElement<any>;
     }
 
     type RouteComponents = { [key: string]: RouteComponent }
@@ -87,8 +88,8 @@ declare namespace ReactRouter {
         parseQueryString?: ParseQueryString
         stringifyQuery?: StringifyQuery
     }
-    interface Router extends React.ComponentClass<RouterProps> {}
-    interface RouterElement extends React.ReactElement<RouterProps> {}
+    interface Router extends React.ComponentClass<RouterProps> { }
+    interface RouterElement extends React.ReactElement<RouterProps> { }
     const Router: Router
 
 
@@ -100,8 +101,8 @@ declare namespace ReactRouter {
         query?: H.Query
         state?: H.LocationState
     }
-    interface Link extends React.ComponentClass<LinkProps> {}
-    interface LinkElement extends React.ReactElement<LinkProps> {}
+    interface Link extends React.ComponentClass<LinkProps> { }
+    interface LinkElement extends React.ReactElement<LinkProps> { }
     const Link: Link
 
 
@@ -116,8 +117,8 @@ declare namespace ReactRouter {
         params: Params
         components?: RouteComponent[]
     }
-    interface RoutingContext extends React.ComponentClass<RoutingContextProps> {}
-    interface RoutingContextElement extends React.ReactElement<RoutingContextProps> {}
+    interface RoutingContext extends React.ComponentClass<RoutingContextProps> { }
+    interface RoutingContextElement extends React.ReactElement<RoutingContextProps> { }
     const RoutingContext: RoutingContext
 
 
@@ -132,8 +133,8 @@ declare namespace ReactRouter {
         onEnter?: EnterHook
         onLeave?: LeaveHook
     }
-    interface Route extends React.ComponentClass<RouteProps> {}
-    interface RouteElement extends React.ReactElement<RouteProps> {}
+    interface Route extends React.ComponentClass<RouteProps> { }
+    interface RouteElement extends React.ReactElement<RouteProps> { }
     const Route: Route
 
 
@@ -159,8 +160,8 @@ declare namespace ReactRouter {
         query?: H.Query
         state?: H.LocationState
     }
-    interface Redirect extends React.ComponentClass<RedirectProps> {}
-    interface RedirectElement extends React.ReactElement<RedirectProps> {}
+    interface Redirect extends React.ComponentClass<RedirectProps> { }
+    interface RedirectElement extends React.ReactElement<RedirectProps> { }
     const Redirect: Redirect
 
 
@@ -172,8 +173,8 @@ declare namespace ReactRouter {
         onEnter?: EnterHook
         onLeave?: LeaveHook
     }
-    interface IndexRoute extends React.ComponentClass<IndexRouteProps> {}
-    interface IndexRouteElement extends React.ReactElement<IndexRouteProps> {}
+    interface IndexRoute extends React.ComponentClass<IndexRouteProps> { }
+    interface IndexRouteElement extends React.ReactElement<IndexRouteProps> { }
     const IndexRoute: IndexRoute
 
 
@@ -182,8 +183,8 @@ declare namespace ReactRouter {
         query?: H.Query
         state?: H.LocationState
     }
-    interface IndexRedirect extends React.ComponentClass<IndexRedirectProps> {}
-    interface IndexRedirectElement extends React.ReactElement<IndexRedirectProps> {}
+    interface IndexRedirect extends React.ComponentClass<IndexRedirectProps> { }
+    interface IndexRedirectElement extends React.ReactElement<IndexRedirectProps> { }
     const IndexRedirect: IndexRedirect
 
 
@@ -312,7 +313,7 @@ declare module "react-router/lib/useRoutes" {
 
 declare module "react-router/lib/PatternUtils" {
 
-	export function formatPattern(pattern: string, params: {}): string;
+    export function formatPattern(pattern: string, params: {}): string;
 
 }
 
@@ -421,7 +422,7 @@ declare module "react-router" {
     export type LeaveHook = ReactRouter.LeaveHook
     export type ParseQueryString = ReactRouter.ParseQueryString
     export type RedirectFunction = ReactRouter.RedirectFunction
-    export type RouteComponentProps<P,R> = ReactRouter.RouteComponentProps<P,R>;
+    export type RouteComponentProps<P, R> = ReactRouter.RouteComponentProps<P, R>;
     export type RouteHook = ReactRouter.RouteHook
     export type StringifyQuery = ReactRouter.StringifyQuery
     export type RouterListener = ReactRouter.RouterListener
@@ -429,22 +430,22 @@ declare module "react-router" {
     export type HistoryBase = ReactRouter.HistoryBase
 
     export {
-        Router,
-        Link,
-        IndexLink,
-        IndexRedirect,
-        IndexRoute,
-        Redirect,
-        Route,
-        History,
-        Lifecycle,
-        RouteContext,
-        useRoutes,
-        createRoutes,
-        formatPattern,
-        RoutingContext,
-        PropTypes,
-        match
+    Router,
+    Link,
+    IndexLink,
+    IndexRedirect,
+    IndexRoute,
+    Redirect,
+    Route,
+    History,
+    Lifecycle,
+    RouteContext,
+    useRoutes,
+    createRoutes,
+    formatPattern,
+    RoutingContext,
+    PropTypes,
+    match
     }
 
     export default Router

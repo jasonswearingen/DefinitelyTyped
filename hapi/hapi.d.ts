@@ -1,9 +1,9 @@
-// Type definitions for hapi 8.8.0
+// Type definitions for hapi 11.1.3
 // Project: http://github.com/spumko/hapi
 // Definitions by: Jason Swearingen <http://github.com/jasonswearingen>
 // Definitions: https://github.com/borisyankov/DefinitelyTyped
 
-//This is a total rewrite of Hakubo's original hapi.d.ts, as it was out of date/incomplete.
+//Note/Disclaimer: This .d.ts was created against hapi v8.x but it seems to be valid against the current hapi version (11.x).  YMMV.
 
 
 /// <reference path="../node/node.d.ts" />
@@ -90,7 +90,7 @@ declare module "hapi" {
         /** - a string or string array of labels used to server.select() specific connections matching the specified labels.Defaults to an empty array [](no labels).*/
         labels?: string | string[];
         /**  - used to create an HTTPS connection.The tls object is passed unchanged as options to the node.js HTTPS server as described in the node.js HTTPS documentation.Set to true when passing a listener object that has been configured to use TLS directly. */
-        tls?: boolean | Object;
+        tls?: boolean | { key?: string; cert?: string; pfx?: string; } | Object;
 
     }
 
@@ -533,25 +533,27 @@ declare module "hapi" {
         /** sets common security headers (disabled by default).To enable set security to true or to an object with the following options */
         security?: boolean | {
             /** controls the 'Strict-Transport-Security' header.If set to true the header will be set to max- age=15768000, if specified as a number the maxAge parameter will be set to that number.Defaults to true.You may also specify an object with the following fields: */
-            hsts: boolean | number | {
+            hsts?: boolean | number | {
                 /** the max- age portion of the header, as a number.Default is 15768000. */
                 maxAge?: number;
                 /**  a boolean specifying whether to add the includeSubdomains flag to the header. */
                 includeSubdomains?: boolean;
+                /** a boolean specifying whether to add the 'preload' flag (used to submit domains inclusion in Chrome's HTTP Strict Transport Security (HSTS) preload list) to the header. */
+                preload?: boolean;
             };
             /** controls the 'X-Frame-Options' header.When set to true the header will be set to DENY, you may also specify a string value of 'deny' or 'sameorigin'.To use the 'allow-from' rule, you must set this to an object with the following fields: */
-            xframe: {
+            xframe?: {
                 /** either 'deny', 'sameorigin', or 'allow-from' */
                 rule: string;
                 /** when rule is 'allow-from' this is used to form the rest of the header, otherwise this field is ignored.If rule is 'allow-from' but source is unset, the rule will be automatically changed to 'sameorigin'. */
                 source: string;
             };
             /** boolean that controls the 'X-XSS-PROTECTION' header for IE.Defaults to true which sets the header to equal '1; mode=block'.NOTE: This setting can create a security vulnerability in versions of IE below 8, as well as unpatched versions of IE8.See here and here for more information.If you actively support old versions of IE, it may be wise to explicitly set this flag to false. */
-            xss: boolean;
+            xss?: boolean;
             /**  boolean controlling the 'X-Download-Options' header for IE, preventing downloads from executing in your context.Defaults to true setting the header to 'noopen'. */
-            noOpen: boolean;
+            noOpen?: boolean;
             /** boolean controlling the 'X-Content-Type-Options' header.Defaults to true setting the header to its only and default option, 'nosniff'. */
-            noSniff: boolean;
+            noSniff?: boolean;
         };
         /** HTTP state management (cookies) allows the server to store information on the client which is sent back to the server with every request (as defined in RFC 6265).state supports the following options: */
         state?: {
@@ -1072,7 +1074,7 @@ declare module "hapi" {
         auth: {
             /** true is the request has been successfully authenticated, otherwise false.*/
             isAuthenticated: boolean;
-            /**  the credential object received during the authentication process. The presence of an object does not mean successful authentication.*/
+            /**  the credential object received during the authentication process. The presence of an object does not mean successful authentication.  can be set in the validate function's callback.*/
             credentials: any;
             /**  an artifact object received from the authentication strategy and used in authentication-related actions.*/
             artifacts: any;
@@ -1083,6 +1085,8 @@ declare module "hapi" {
             /** an object used by the ['cookie' authentication scheme]  https://github.com/hapijs/hapi-auth-cookie */
             session: any
         };
+        /** the connection used by this request*/
+        connection: ServerConnection;
         /**  the node domain object used to protect against exceptions thrown in extensions, handlers and route prerequisites. Can be used to manually bind callback functions otherwise bound to other domains.*/
         domain: any;
         /** the raw request headers (references request.raw.headers).*/
@@ -1457,7 +1461,61 @@ Non-rewritable	308(2)	307
 Notes: 1. Default value. 2. Proposed code, not supported by all clients. */
         rewritable(isRewritable: boolean): void;
     }
+    /** info about a server connection */
+    export interface IServerConnectionInfo {
+        /**  - a unique connection identifier (using the format '{hostname}:{pid}:{now base36}').*/
+        id: string;
+        /**  - the connection creation timestamp.*/
+        created: number;
+        /**  - the connection start timestamp (0 when stopped).*/
+        started: number;
+        /**  the connection port based on the following rules:
+        the configured port value before the server has been started.
+        the actual port assigned when no port is configured or set to 0 after the server has been started.*/
+        port: number;
 
+        /** - the host name the connection was configured to. Defaults to the operating system hostname when available, otherwise 'localhost'.*/
+        host: string;
+        /** - the active IP address the connection was bound to after starting.Set to undefined until the server has been started or when using a non TCP port (e.g. UNIX domain socket).*/
+        address: string;
+        /**  - the protocol used:
+        'http' - HTTP.
+        'https' - HTTPS.
+        'socket' - UNIX domain socket or Windows named pipe.*/
+        protocol: string;
+        /** a string representing the connection (e.g. 'http://example.com:8080' or 'socket:/unix/domain/socket/path'). Contains the uri setting if provided, otherwise constructed from the available settings. If no port is available or set to 0, the uri will not include a port component.*/
+        uri: string;
+    }
+    /**
+     *  undocumented.   The connection object constructed after calling server.connection();
+     * can be accessed via server.connections; or request.connection;
+     */
+    export class ServerConnection extends Events.EventEmitter {
+        domain: any;
+        _events: { route: Function, domain: Function, _events: Function, _eventsCount: Function, _maxListeners: Function };
+        _eventsCount: number;
+        settings: IServerConnectionOptions;
+        server: Server;
+        /** ex: "tcp" */
+        type: string;
+        _started: boolean;
+        /** dictionary of sockets */
+        _connections: { [ip_port: string]: any };
+        _onConnection: Function;
+        registrations: any;
+        _extensions: any;
+        _requestCounter: { value: number; min: number; max: number };
+        _load: any;
+        states: {
+            settings: any; cookies: any; names: any[]
+        };
+        auth: { connection: ServerConnection; _schemes: any; _strategies: any; settings: any; };
+        _router: any;
+        MSPluginsCollection: any;
+        applicationCache: any;
+        addEventListener: any;
+        info: IServerConnectionInfo;
+    }
 
 	/** Server http://hapijs.com/api#server
 	rver object is the main application container. The server manages all incoming connections along with all the facilities provided by the framework. A server can contain more than one connection (e.g. listen to port 80 and 8080).
@@ -1491,7 +1549,7 @@ Notes: 1. Default value. 2. Proposed code, not supported by all clients. */
 		// server.connections.length === 2
 		var a = server.select('a');
 		// a.connections.length === 1*/
-        connections: Array<IServerConnectionOptions>;
+        connections: Array<ServerConnection>;
 		/** When the server contains exactly one connection, info is an object containing information about the sole connection.
 		* When the server contains more than one connection, each server.connections array member provides its own connection.info.
 		var server = new Hapi.Server();
@@ -1501,30 +1559,7 @@ Notes: 1. Default value. 2. Proposed code, not supported by all clients. */
 		// server.info === null
 		// server.connections[1].info.port === 8080
 		*/
-        info: {
-            /**  - a unique connection identifier (using the format '{hostname}:{pid}:{now base36}').*/
-            id: string;
-            /**  - the connection creation timestamp.*/
-            created: number;
-            /**  - the connection start timestamp (0 when stopped).*/
-            started: number;
-			/**  the connection port based on the following rules:
-			the configured port value before the server has been started.
-			the actual port assigned when no port is configured or set to 0 after the server has been started.*/
-            port: number;
-
-            /** - the host name the connection was configured to. Defaults to the operating system hostname when available, otherwise 'localhost'.*/
-            host: string;
-            /** - the active IP address the connection was bound to after starting.Set to undefined until the server has been started or when using a non TCP port (e.g. UNIX domain socket).*/
-            address: string;
-			/**  - the protocol used:
-			'http' - HTTP.
-			'https' - HTTPS.
-			'socket' - UNIX domain socket or Windows named pipe.*/
-            protocol: string;
-            /** a string representing the connection (e.g. 'http://example.com:8080' or 'socket:/unix/domain/socket/path'). Contains the uri setting if provided, otherwise constructed from the available settings. If no port is available or set to 0, the uri will not include a port component.*/
-            uri: string;
-        };
+        info: IServerConnectionInfo;
 		/** An object containing the process load metrics (when load.sampleInterval is enabled):
 		rss - RSS memory usage.
 		var Hapi = require('hapi');
@@ -1713,7 +1748,7 @@ Notes: 1. Default value. 2. Proposed code, not supported by all clients. */
 			}
 			}
 			});*/
-            strategy(name: string, scheme: any, mode?: boolean, options?: any): void;
+            strategy(name: string, scheme: any, mode?: boolean | string, options?: any): void;
 
 			/** server.auth.test(strategy, request, next)
 			Tests a request against an authentication strategy where:
@@ -1858,7 +1893,7 @@ Notes: 1. Default value. 2. Proposed code, not supported by all clients. */
 		Registers an extension function in one of the available extension points where:
 		event - the event name.
 		method - a function or an array of functions to be executed at a specified point during request processing. The required extension function signature is function(request, reply) where:
-		request - the request object.
+		request - the request object. NOTE: Access the Response via request.response
 		reply - the reply interface which is used to return control back to the framework. To continue normal execution of the request lifecycle, reply.continue() must be called. To abort processing and return a response to the client, call reply(value) where value is an error or any other valid response.
 		this - the object provided via options.bind or the current active context set with server.bind().
 		options - an optional object with the following:
